@@ -1,0 +1,6 @@
+saida/
+*.db
+relatorio.txt
+__pycache__/
+.venv/
+.ipynb_checkpoints/
