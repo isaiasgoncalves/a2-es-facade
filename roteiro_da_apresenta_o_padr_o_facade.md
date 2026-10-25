@@ -4,7 +4,7 @@ Esta estrutura foi desenhada para **5 apresentadores**, garantindo que cada pess
 
 ---
 
-## 👤 Parte 1: Fundamentação Teórica e Diferenciação (Pessoa 1)
+## 👤 Parte 1: Fundamentação Teórica e Diferenciação (Mateus)
 
 **Objetivo:** Introduzir o conceito do padrão Facade de forma clara (baseado no *Refactoring Guru*) e diferenciá-lo de outros padrões parecidos para evitar confusões comuns.
 
@@ -22,7 +22,7 @@ Esta estrutura foi desenhada para **5 apresentadores**, garantindo que cada pess
 
 ---
 
-## 👤 Parte 2: O Cenário do Pipeline de Dados e o "Caos" Sem Facade (Pessoa 2)
+## 👤 Parte 2: O Cenário do Pipeline de Dados e o "Caos" Sem Facade (Isaías)
 
 **Objetivo:** Apresentar o caso prático (Pipeline de Dados / ETL) e mostrar na prática o código e os problemas de **não** utilizar o padrão Facade.
 
@@ -44,7 +44,7 @@ Esta estrutura foi desenhada para **5 apresentadores**, garantindo que cada pess
 
 ---
 
-## 👤 Parte 3: Arquitetura da Solução e Construção do Facade (Pessoa 3)
+## 👤 Parte 3: Arquitetura da Solução e Construção do Facade (Henrique Gasparelo)
 
 **Objetivo:** Mostrar o desenho arquitetural do padrão aplicado ao pipeline e construir a classe `DataPipelineFacade` por dentro.
 
@@ -62,7 +62,7 @@ Esta estrutura foi desenhada para **5 apresentadores**, garantindo que cada pess
 
 ---
 
-## 👤 Parte 4: O Pipeline COM Facade em Ação e Flexibilidade (Pessoa 4)
+## 👤 Parte 4: O Pipeline COM Facade em Ação e Flexibilidade (Thevez)
 
 **Objetivo:** Comparar o código do cliente (Antes vs. Depois) e demonstrar como o Facade lida com diferentes necessidades sem "prender" o desenvolvedor.
 
@@ -78,7 +78,7 @@ Esta estrutura foi desenhada para **5 apresentadores**, garantindo que cada pess
 
 ---
 
-## 👤 Parte 5: Vantagens, Dificuldades, Principais Erros e Como Corrigi-los (Pessoa 5)
+## 👤 Parte 5: Vantagens, Dificuldades, Principais Erros e Como Corrigi-los (Henrique Beltrão)
 
 **Objetivo:** Fechar a apresentação com uma visão sênior e crítica sobre o padrão, mostrando benefícios reais, armadilhas de implementação e soluções de refatoração.
 
