@@ -28,7 +28,7 @@ class ResultadoPipeline:
     mensal: pd.DataFrame
     validacao: RelatorioValidacao
     banco: Path
-    relatorio: Path
+    relatorio: Path | None = None
 
 
 class PipelineClima:
@@ -55,13 +55,26 @@ class PipelineClima:
         return cls(fonte=FonteCSV(str(csv)), pasta_saida=pasta_saida)
 
     def executar(self, cidades: list[str], inicio: str, fim: str) -> ResultadoPipeline:
+        """Pipeline completo: do dado bruto ao relatório."""
+        resultado = self.carregar(cidades, inicio, fim)
+        resultado.relatorio = self.relatorio.gerar(
+            resultado.mensal, resultado.validacao, fonte=type(self.fonte).__name__
+        )
+        log.info("Relatório em %s", resultado.relatorio)
+        return resultado
+
+    def carregar(self, cidades: list[str], inicio: str, fim: str) -> ResultadoPipeline:
+        """Só até o banco, sem relatório. É o que a carga noturna precisa."""
         bruto = self._extrair(cidades, inicio, fim)
         validacao = self.validador.validar(bruto)
         log.info("Validação: %d linhas, %d problemas", validacao.linhas, validacao.problemas)
 
         diario = self.limpador.limpar(bruto)
         mensal = self.agregador.mensal(diario)
+        self._gravar(diario, mensal)
+        return ResultadoPipeline(diario, mensal, validacao, self.repositorio.caminho)
 
+    def _gravar(self, diario: pd.DataFrame, mensal: pd.DataFrame) -> None:
         self.repositorio.conectar()
         try:
             self.repositorio.criar_tabelas()
@@ -69,10 +82,6 @@ class PipelineClima:
             self.repositorio.salvar("clima_mensal", mensal, ["cidade", "mes"])
         finally:
             self.repositorio.fechar()
-
-        caminho = self.relatorio.gerar(mensal, validacao, fonte=type(self.fonte).__name__)
-        log.info("Relatório em %s", caminho)
-        return ResultadoPipeline(diario, mensal, validacao, self.repositorio.caminho, caminho)
 
     def _extrair(self, cidades: list[str], inicio: str, fim: str) -> pd.DataFrame:
         desconhecidas = [c for c in cidades if c not in CIDADES]
