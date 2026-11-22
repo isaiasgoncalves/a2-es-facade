@@ -9,7 +9,7 @@ import pytest
 from clima import PipelineClima
 from clima.validacao import ErroValidacao, Validador
 
-DADOS = Path(__file__).resolve().parents[1] / "dados"
+DADOS = Path(__file__).resolve().parents[2] / "dados"
 CIDADES = ["Rio de Janeiro", "São Paulo", "Belo Horizonte"]
 
 
