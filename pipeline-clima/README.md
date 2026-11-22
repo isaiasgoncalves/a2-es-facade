@@ -1,85 +1,114 @@
-# Pipeline de clima — com e sem Facade
+# Pipeline de clima — antes e depois do Facade
 
-Projeto do trabalho de Engenharia de Software sobre o padrão **Facade**. O mesmo pipeline de dados aparece em duas versões:
+Trabalho A2 de Engenharia de Software (FGV EMAp, 2026.2) sobre o padrão **Facade**.
+O mesmo pipeline de dados existe em duas versões, com **os mesmos subsistemas**:
 
-| Versão | Onde | Ideia |
+| Versão | Pasta | Como os clientes usam o pipeline |
 | --- | --- | --- |
-| Go horse | `notebooks/01_go_horse.ipynb` | Tudo num notebook, sem funções, URL colada no código, copia e cola para cada caso novo |
-| Com Facade | `clima/` + `main.py` + `notebooks/02_com_facade.ipynb` | Seis subsistemas e uma fachada, `PipelineClima`, que expõe uma chamada só |
+| Original | `original/` | Cada cliente importa os subsistemas e monta a sequência na mão |
+| Refatorada | `refatorado/` | Cada cliente faz uma chamada à fachada `PipelineClima` |
 
-Referências do padrão: [Facade — Referências e trilha de estudo](../Facade%20—%20Referências%20e%20trilha%20de%20estudo.md).
+`diff -r original/clima refatorado/clima` mostra que a única diferença no pacote é o
+`facade.py` (e o `__init__.py` que o exporta). O que muda são os clientes.
 
 ## O pipeline
 
-Temperatura máxima, mínima e chuva diárias de Rio de Janeiro, São Paulo e Belo Horizonte, de jan a mar/2026.
+Temperatura máxima, mínima e chuva diárias de Rio de Janeiro, São Paulo e Belo Horizonte,
+de jan a mar/2026.
 
 ```
 extrair (API Open-Meteo ou CSV) → validar → limpar → agregar por mês → gravar no SQLite → gerar relatório
 ```
 
+| Subsistema | Arquivo | Responsabilidade |
+| --- | --- | --- |
+| `FonteOpenMeteo`, `FonteCSV` | `clima/extracao.py` | Buscar os dados diários (mesma interface: `buscar`) |
+| `Validador` | `clima/validacao.py` | Medir a qualidade dos dados brutos sem alterá-los |
+| `Limpador` | `clima/limpeza.py` | Tratar duplicatas, valores impossíveis, inversões e lacunas |
+| `Agregador` | `clima/agregacao.py` | Resumir por cidade e mês |
+| `RepositorioSQLite` | `clima/carga.py` | Gravar no banco (protocolo: `conectar → criar_tabelas → salvar → fechar`) |
+| `GeradorRelatorio` | `clima/relatorio.py` | Escrever o relatório em Markdown |
+
+## Os três clientes
+
+As duas versões têm os mesmos clientes, com os mesmos nomes e assinaturas:
+
+| Cliente | Fonte | O que faz |
+| --- | --- | --- |
+| `relatorio_mensal.py` | API | Pipeline completo, com relatório |
+| `analise_csv.py` | CSV local | Pipeline completo e imprime a validação |
+| `carga_noturna.py` | API | Só até o banco, sem relatório |
+
 ## Estrutura
 
 ```
 pipeline-clima/
-├── clima/                  # versão com Facade
-│   ├── facade.py           # PipelineClima: a fachada
-│   ├── extracao.py         # FonteOpenMeteo, FonteCSV  (mesma interface: buscar)
-│   ├── validacao.py        # Validador → RelatorioValidacao
-│   ├── limpeza.py          # Limpador (a ordem dos passos importa)
-│   ├── agregacao.py        # Agregador.mensal
-│   ├── carga.py            # RepositorioSQLite (conectar → criar_tabelas → salvar → fechar)
-│   ├── relatorio.py        # GeradorRelatorio (Markdown)
-│   └── config.py           # cidades e colunas padronizadas
-├── main.py                 # cliente de linha de comando: só conhece a fachada
-├── notebooks/
-│   ├── 01_go_horse.ipynb
-│   └── 02_com_facade.ipynb
+├── original/
+│   ├── clima/                  # subsistemas, sem fachada
+│   └── relatorio_mensal.py, analise_csv.py, carga_noturna.py
+├── refatorado/
+│   ├── clima/                  # mesmos subsistemas + facade.py
+│   ├── relatorio_mensal.py, analise_csv.py, carga_noturna.py
+│   ├── main.py                 # CLI com argparse
+│   ├── 02_com_facade.ipynb
+│   └── tests/test_pipeline.py  # testes da fachada
 ├── dados/
-│   ├── clima_amostra.csv   # dados reais do Open-Meteo, para rodar offline
-│   └── clima_sujo.csv      # a mesma amostra com defeitos injetados de propósito
-└── tests/test_pipeline.py  # roda offline, com o CSV e uma fonte falsa
+│   ├── clima_amostra.csv       # dados reais do Open-Meteo, para rodar offline
+│   └── clima_sujo.csv          # a mesma amostra com defeitos injetados
+└── tests/test_equivalencia.py  # original × refatorado
 ```
 
-**Sobre `clima_sujo.csv`:** é a amostra real com defeitos colocados à mão para a demonstração: 3 nulos, `tmax` = 999 °C em São Paulo (31/01), chuva negativa, `tmin` e `tmax` trocados num dia e 3 linhas repetidas. Não são dados reais.
+**Sobre `clima_sujo.csv`:** é a amostra real com defeitos colocados à mão para a
+demonstração: 3 nulos, `tmax` = 999 °C em São Paulo (31/01), chuva negativa, `tmin` e
+`tmax` trocados num dia e 3 linhas repetidas. Não são dados reais.
 
 ## Como rodar
+
+Requer Python 3.10+ (testado em 3.11 e 3.14).
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-pytest                                    # testes offline
-python main.py                            # versão com Facade, lendo da API
-python main.py --csv dados/clima_sujo.csv # offline, com os dados sujos
-jupyter notebook notebooks/               # as duas versões lado a lado
+pytest                        # todos os testes, offline
+
+cd original                   # ou: cd refatorado
+python analise_csv.py         # offline, com o CSV sujo
+python relatorio_mensal.py    # precisa de internet (API Open-Meteo)
+python carga_noturna.py       # precisa de internet
 ```
 
-As saídas (`clima.db`, `relatorio_clima.md`) vão para `saida/`, que fica fora do Git.
+As saídas (`clima.db`, `relatorio_clima.md`) vão para `saida/` dentro da pasta da versão,
+fora do Git.
 
-## Como a fachada aparece no código
+## Comportamento preservado
 
-```python
-from clima import PipelineClima
+`tests/test_equivalencia.py` roda cada cliente nas duas versões com os dois CSVs
+(6 casos) e confere que são iguais: o resumo mensal, as tabelas do banco, o relatório
+(exceto a data de geração) e o que é impresso na tela. Como as duas versões têm um
+pacote `clima`, cada uma roda num processo próprio.
 
-PipelineClima().executar(["Rio de Janeiro"], "2026-01-01", "2026-03-31")         # API
-PipelineClima.offline("dados/clima_sujo.csv").executar(["Rio de Janeiro"], ...)   # CSV
-```
+Única diferença intencional: com uma cidade desconhecida, `original/carga_noturna.py`
+gera `KeyError`, porque não faz a checagem que os outros dois clientes fazem. Na versão
+refatorada, a checagem está na fachada e vale para todos (`ValueError`).
 
-Mapeando para os participantes do Refactoring Guru:
+## Mapeamento para o padrão (Refactoring Guru)
 
 | Participante | Neste projeto |
 | --- | --- |
-| Fachada | `PipelineClima` |
-| Subsistema complexo | `FonteOpenMeteo`/`FonteCSV`, `Validador`, `Limpador`, `Agregador`, `RepositorioSQLite`, `GeradorRelatorio` |
-| Cliente | `main.py`, `02_com_facade.ipynb`, os testes |
+| Fachada | `PipelineClima` (`executar`, `carregar`, `offline`) |
+| Subsistema complexo | as seis classes de `clima/` |
+| Cliente | os três clientes, `main.py`, o notebook e os testes |
 | Fachada adicional | ainda não existe; candidata natural: uma `RelatorioFacade` se o relatório ganhar gráficos e PDF |
 
-Os subsistemas não importam a fachada e continuam utilizáveis direto. O último bloco de `02_com_facade.ipynb` mostra isso.
+Os subsistemas não importam a fachada e continuam utilizáveis direto.
 
-## Roteiro sugerido para a demonstração
+## Integrantes
 
-1. Rodar `01_go_horse.ipynb` com a API: funciona.
-2. Rodar a parte do CSV sujo: o resultado sai errado (SP, janeiro: máxima média de 59,2 °C) e ninguém percebe.
-3. Rodar `02_com_facade.ipynb`: o mesmo caso é uma linha a mais, o validador acusa 9 problemas e o resultado sai certo (26,9 °C).
-4. Mostrar a troca de fonte no teste `test_trocar_fonte_nao_muda_o_cliente`.
-5. Fechar com o contra: a fachada pode virar *god object* se tudo for para dentro dela.
+| Nome | Matrícula |
+| --- | --- |
+| Isaías Gouvêa Gonçalves | `<matrícula>` |
+| Henrique Gasparelo | `<matrícula>` |
+| Henrique Beltrão | `<matrícula>` |
+| Mateus Mourão | `<matrícula>` |
+| Thevez | `<matrícula>` |
