@@ -176,8 +176,7 @@ pipeline-clima/
 ├── refatorado/
 │   ├── clima/                  # mesmos subsistemas + facade.py
 │   ├── relatorio_mensal.py, analise_csv.py, carga_noturna.py
-│   ├── main.py                 # CLI com argparse
-│   ├── 02_com_facade.ipynb
+│   ├── main.py               
 │   └── tests/test_pipeline.py  # testes da fachada
 ├── dados/
 │   ├── clima_amostra.csv       # dados reais do Open-Meteo, para rodar offline
