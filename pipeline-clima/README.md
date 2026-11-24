@@ -16,9 +16,77 @@ O mesmo pipeline de dados existe em duas versões, com **os mesmos subsistemas**
 Temperatura máxima, mínima e chuva diárias de Rio de Janeiro, São Paulo e Belo Horizonte,
 de jan a mar/2026.
 
+### Fluxo dos dados
+
+```mermaid
+flowchart TD
+    SRC[("API Open-Meteo<br/>ou CSV local")]
+    EXT["<b>Extração</b><br/>FonteOpenMeteo / FonteCSV<br/>buscar() por cidade"]
+    BRUTO[/"bruto<br/>cidade, data, tmax, tmin, chuva_mm"/]
+    VAL["<b>Validação</b><br/>Validador.validar()<br/>conta problemas, não altera"]
+    RV[/"RelatorioValidacao<br/>duplicadas, nulos, fora da faixa,<br/>tmin > tmax"/]
+    LIM["<b>Limpeza</b><br/>Limpador.limpar()<br/>remove duplicatas · valor impossível vira nulo<br/>destroca tmin/tmax · interpola temperatura<br/>chuva ausente = 0 mm"]
+    DIA[/"diario<br/>uma linha por cidade e dia"/]
+    AGR["<b>Agregação</b><br/>Agregador.mensal()<br/>médias, amplitude, chuva total,<br/>dias chuvosos (≥ 1 mm)"]
+    MEN[/"mensal<br/>uma linha por cidade e mês"/]
+    REP["<b>Carga</b><br/>RepositorioSQLite<br/>conectar → criar_tabelas → salvar → fechar"]
+    DB[("saida/clima.db<br/>clima_diario · clima_mensal")]
+    REL["<b>Relatório</b><br/>GeradorRelatorio.gerar()"]
+    MD[("saida/relatorio_clima.md")]
+
+    SRC --> EXT --> BRUTO
+    BRUTO --> VAL --> RV
+    BRUTO --> LIM --> DIA --> AGR --> MEN
+    DIA --> REP
+    MEN --> REP --> DB
+    MEN --> REL
+    RV --> REL
+    REL --> MD
 ```
-extrair (API Open-Meteo ou CSV) → validar → limpar → agregar por mês → gravar no SQLite → gerar relatório
+
+A validação só mede a qualidade do dado bruto; quem corrige é a limpeza. O relatório
+junta duas saídas que vêm de ramos diferentes: o resumo mensal e o resultado da validação.
+
+### Ordem das chamadas (versão refatorada)
+
+O mesmo fluxo, visto a partir de uma chamada do cliente à fachada. `carregar()` para
+depois da carga no banco; `executar()` faz tudo isso e ainda gera o relatório.
+
+```mermaid
+sequenceDiagram
+    actor C as Cliente
+    participant F as PipelineClima
+    participant S as Fonte
+    participant V as Validador
+    participant L as Limpador
+    participant A as Agregador
+    participant R as RepositorioSQLite
+    participant G as GeradorRelatorio
+
+    C->>F: executar(cidades, inicio, fim)
+    F->>F: carregar(...)
+    Note over F: checa se as cidades existem<br/>(ValueError se não)
+    loop cada cidade
+        F->>S: buscar(cidade, inicio, fim)
+        S-->>F: DataFrame
+    end
+    F->>V: validar(bruto)
+    V-->>F: RelatorioValidacao
+    F->>L: limpar(bruto)
+    L-->>F: diario
+    F->>A: mensal(diario)
+    A-->>F: mensal
+    F->>R: conectar()
+    F->>R: criar_tabelas()
+    F->>R: salvar(clima_diario) · salvar(clima_mensal)
+    F->>R: fechar() (no finally)
+    F->>G: gerar(mensal, validacao, fonte)
+    G-->>F: caminho do relatório
+    F-->>C: ResultadoPipeline
 ```
+
+Na versão original não existe a coluna `PipelineClima`: é o próprio cliente que faz
+cada uma dessas chamadas, na ordem.
 
 | Subsistema | Arquivo | Responsabilidade |
 | --- | --- | --- |
