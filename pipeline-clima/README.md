@@ -29,6 +29,65 @@ extrair (API Open-Meteo ou CSV) → validar → limpar → agregar por mês → 
 | `RepositorioSQLite` | `clima/carga.py` | Gravar no banco (protocolo: `conectar → criar_tabelas → salvar → fechar`) |
 | `GeradorRelatorio` | `clima/relatorio.py` | Escrever o relatório em Markdown |
 
+## Arquitetura
+
+**Original:** cada cliente fala direto com os subsistemas que usa, e cada um repete a
+ordem das etapas e o protocolo do banco.
+
+```mermaid
+flowchart LR
+    subgraph clientes["Clientes"]
+        RM["relatorio_mensal.py"]
+        AC["analise_csv.py"]
+        CN["carga_noturna.py"]
+    end
+
+    subgraph clima["clima/ (subsistemas)"]
+        API["FonteOpenMeteo"]
+        CSV["FonteCSV"]
+        VAL["Validador"]
+        LIM["Limpador"]
+        AGR["Agregador"]
+        REP["RepositorioSQLite"]
+        REL["GeradorRelatorio"]
+    end
+
+    RM --> API & VAL & LIM & AGR & REP & REL
+    AC --> CSV & VAL & LIM & AGR & REP & REL
+    CN --> API & LIM & AGR & REP
+```
+
+**Refatorada:** os clientes só conhecem a fachada `PipelineClima`, que cria os
+subsistemas e os chama na ordem certa.
+
+```mermaid
+flowchart LR
+    subgraph clientes["Clientes"]
+        RM["relatorio_mensal.py"]
+        AC["analise_csv.py"]
+        CN["carga_noturna.py"]
+        MAIN["main.py"]
+    end
+
+    F["PipelineClima<br/>(clima/facade.py)"]
+
+    subgraph clima["clima/ (subsistemas, inalterados)"]
+        API["FonteOpenMeteo"]
+        CSV["FonteCSV"]
+        VAL["Validador"]
+        LIM["Limpador"]
+        AGR["Agregador"]
+        REP["RepositorioSQLite"]
+        REL["GeradorRelatorio"]
+    end
+
+    RM -- "executar()" --> F
+    AC -- "offline().executar()" --> F
+    CN -- "carregar()" --> F
+    MAIN -- "executar()" --> F
+    F --> API & CSV & VAL & LIM & AGR & REP & REL
+```
+
 ## Os três clientes
 
 As duas versões têm os mesmos clientes, com os mesmos nomes e assinaturas:
