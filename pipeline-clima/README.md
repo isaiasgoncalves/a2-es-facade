@@ -233,8 +233,8 @@ Os subsistemas não importam a fachada e continuam utilizáveis direto.
 
 | Nome | Matrícula |
 | --- | --- |
-| Isaías Gouvêa Gonçalves | `<matrícula>` |
-| Henrique Gasparelo | `<matrícula>` |
-| Henrique Beltrão | `<matrícula>` |
-| Mateus Mourão | `<matrícula>` |
-| Thevez | `<matrícula>` |
+| Isaías Gouvêa Gonçalves | 241708012 |
+| Henrique Gasparelo | 241708055 |
+| Henrique Beltrão | 241708023 |
+| Mateus Mourão | 241708301 |
+| Thevez | 241708005 |
